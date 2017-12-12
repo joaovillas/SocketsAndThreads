@@ -11,7 +11,7 @@ public class Client {
         System.out.println("##########Cliente##########");
 
         System.out.println("Iniciando conexao com o servidor");
-
+try{
         Socket socket = new Socket("localhost", 9898);
 
         System.out.println("Conexao Establish");
@@ -23,8 +23,10 @@ public class Client {
         PrintStream out = new PrintStream(output);
 
         Scanner sc = new Scanner(System.in);
-
-        while (true) {
+        
+        boolean conti = true;
+        
+        while (conti == true) {
 
             System.out.println("Digite um comando: ");
             String mensagem = sc.nextLine();
@@ -46,11 +48,26 @@ public class Client {
                 String arquivo = sc.nextLine();
                 
                 out.println(mensagem);
-                System.out.println("enviou mensagem");
                 out.println(arquivo);
-                System.out.println("enviou arquivo");
                 
+                String existente = in.readLine();
+                
+                if(existente.equalsIgnoreCase("[OK]")){
+                System.out.println(existente);
                 getFileFromServeR(socket, arquivo);
+                
+                socket.close();
+                conti=false;
+                break;
+              
+                }else{
+                    
+                    System.out.println(existente); 
+                    System.out.println("Conexão com o servidor encerrada");
+                    socket.close();
+                    conti=false;
+                    
+                }
             }else{
            
             out.println(mensagem);
@@ -59,42 +76,33 @@ public class Client {
 
             }
         }
+}catch(ConnectException e){
+    System.out.println("Conexão Recusada ! Servidor Indisponível");
+}
     }
 
     private static void getFileFromServeR(Socket sockServer, String arquivo) throws Exception {
-
-        FileOutputStream fos = null;
-        InputStream is = null;
-
-        Scanner sc = new Scanner(System.in);
-        is = sockServer.getInputStream();
-
-        // Cria arquivo local no cliente
-        //
-        fos = new FileOutputStream(new File("src/DestinoArquivos/" + arquivo ));
-
-        System.out.println("Arquivo Local Criado /src/DestinoArquivos/" + arquivo);
-
-        // Prepara variaveis para transferencia
-        byte[] cbuffer = new byte[1024];
-        int bytesRead;
-        int i =0;
-        // Copia conteudo do canal
-        while ((bytesRead = is.read(cbuffer)) != 1 || i!=100) {
-            fos.write(cbuffer, 0, bytesRead);
-            fos.flush();
-            System.out.println("Baixando ainda!");
+        
+        ObjectInputStream in = new ObjectInputStream(sockServer.getInputStream());
+        FileOutputStream file = new FileOutputStream("src/DestinoArquivos/"+arquivo);
+        
+        byte [] buf = new byte [4096];
+        while(true){
+            int len = in.read(buf);
+            //Thread.sleep(1000);
             
-            
-            if(i==100){
-                break;
-            }
+            if (len==-1)break;
+            file.write(buf,0,len);
+            file.flush();
             
         }
-        System.out.println("Transferencia concluida!");
+        System.out.println("Transferencia concluida");
         
     }
+}
+        
+    
     
             
            
-}
+

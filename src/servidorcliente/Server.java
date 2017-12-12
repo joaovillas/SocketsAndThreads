@@ -14,18 +14,21 @@ public class Server {
 
         System.out.println("Aguardando Conexao");
 
+       
+
+        while (true) {
+
         Socket socket = server.accept();
 
-        System.out.println("Conexao estabelecida com :" + socket.getInetAddress());
+        System.out.println("Conexao estabelecida com : [" + socket.getInetAddress().getHostAddress()+":"+socket.getPort()+"]");
 
         InputStream input = socket.getInputStream();
         OutputStream output = socket.getOutputStream();
 
         BufferedReader in = new BufferedReader(new InputStreamReader(input));
         PrintStream out = new PrintStream(output);
-
-        while (true) {
-
+            
+            
             String comando = in.readLine();
             System.out.println("Comando do cliente:" + comando);
 
@@ -40,50 +43,74 @@ public class Server {
                 }
             } else if (comando.equalsIgnoreCase("get")) {
                 String arquivo = in.readLine();
-                System.out.println(arquivo);
-                transfereArquivo(socket, arquivo);
+               
+                String []lista ;
+                lista = ListaArquivos.listaArquivos();
+                
+                
+                for(int i=0;i<lista.length;i++){
+                    
+                    if(arquivo.equals(lista[i])){
+                        out.println("[OK]");
+                        Thread.sleep(2000);
+                        transfereArquivo(socket, arquivo);
+                        socket.close();
+                        break;
+                        
+                        
+                    }else if(i==lista.length-1){
+                        out.println("[ ERROR ] ARQUIVO NÃO EXISTE NO DIRETÓRIO.");
+                        try{
+                        socket.close();
+                        break;
+                        
+                        }catch(SocketException e){
+                            socket.close();
+                            break;
+                        }
+                    }
+                }
+                
+                
 
             } else {
                 out.println("Comando não existe");
             }
 
         }
-
+       
+               
+    
     }
 
-    public static void transfereArquivo(Socket sock, String arquivo) throws ClassNotFoundException, IOException {
+    public static void transfereArquivo(Socket sock, String arquivo) throws ClassNotFoundException, IOException, InterruptedException {
         
-
-            FileInputStream fileIn = null;
-            OutputStream socketOut = null;
-
-            // Criando tamanho de leitura
-            byte[] cbuffer = new byte[1024];
-            int bytesRead;
-
-            // Criando arquivo que sera transferido pelo servidor
-            try {
-                File file = new File("src/ServidorArquivos/" + arquivo);
-                fileIn = new FileInputStream(file);
-
-            } catch (NullPointerException e) {
-
-                //RETORNA AO USUARIO <<-------
-                System.out.println("Arquivo não encontrado");
-            } finally {
-                // Criando canal de transferencia
-                socketOut = sock.getOutputStream();
-
-                // Lendo arquivo criado e enviado para o canal de transferencia
-                while ((bytesRead = fileIn.read(cbuffer)) > 0) {
-                    socketOut.write(cbuffer, 0, bytesRead);
-                    socketOut.flush();
-
-                }
-
+        ObjectOutputStream outa = new ObjectOutputStream(sock.getOutputStream());
+        
+        FileInputStream file = new FileInputStream("src/ServidorArquivos/"+arquivo);
+        
+        byte [] buf = new byte [4096];
+        int acum =0;
+       
+       OutputStream output = sock.getOutputStream();
+       PrintStream out = new PrintStream(output);
+        
+        while(true){
+            int len = file.read(buf);
+            try{
+            if ((len*2)==-1)break;
+            outa.flush();
+            outa.write(buf,0,len);
+            }catch(Exception e){
+                break;
             }
-
-        
+            }
+        System.out.println("Transferencia Concluida");
+        try{
+        sock.close();
+        }catch(SocketException e){
+            
+        }
     }
-
 }
+
